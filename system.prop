@@ -1,0 +1,61 @@
+#
+# system.prop for the zero
+#
+
+rild.libpath=/system/lib/libril-qc-1.so
+rild.libargs=-d /dev/smd0
+persist.rild.nitz_plmn=
+persist.rild.nitz_long_ons_0=
+persist.rild.nitz_long_ons_1=
+persist.rild.nitz_long_ons_2=
+persist.rild.nitz_long_ons_3=
+persist.rild.nitz_short_ons_0=
+persist.rild.nitz_short_ons_1=
+persist.rild.nitz_short_ons_2=
+persist.rild.nitz_short_ons_3=
+
+###additional build properties for Telephony
+ro.telephony.gsm.ecclist=110,112,119,911
+ro.telephony.cdma.ecclist=110,112,119,911
+ro.telephony.ecclist=08,000,110,112,118,119,911,999
+ro.telephony.fake.ecclist=
+ro.telephony.num.auto.hyphen=true
+ro.telephony.gsm.spn.shortname=true
+ro.telephony.gsm.wait.switch=true
+ro.telephony.gsm.voicemail=
+ro.telephony.gsm.sms.auto-reg=false
+ro.telephony.ecclist=112
+
+DEVICE_PROVISIONED=1
+keyguard.no_require_sim=true
+ro.opengles.version = 131072
+debug.sf.hw=1
+dalvik.vm.heapsize=32m
+
+# Wifi interface
+wifi.interface=wlan0
+
+## QC RIL doesn't replay call rings
+ro.telephony.call_ring.multiple=false
+ro.telephony.call_ring.delay=5000
+
+## Not enough space in /cache for dalvik-cache
+dalvik.vm.dexopt-data-only=1
+dalvik.vm.execution-mode=int:jit
+ro.ril.disable.power.collapse=1
+ro.product.multi_touch_enabled=true
+ro.product.max_num_touch=2
+ro.config.hw_spn_custom=false
+ro.sf.lcd_density=160
+wifi.supplicant_scan_interval=45
+ro.ril.hsxpa=2
+ro.ril.hsupa.category=5
+ro.ril.def.agps.mode=2
+ro.ril.gprsclass=10
+ro.com.google.locationfeatures=1
+ro.setupwizard.enable_bypass=1
+ro.media.dec.jpeg.memcap=20000000
+dalvik.vm.lockprof.threshold=500
+# Respect ALS setting, turn it off if not in use
+ro.hardware.respect_als=true
+ro.data.on=1
