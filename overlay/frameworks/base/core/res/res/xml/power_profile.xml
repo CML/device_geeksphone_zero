@@ -48,7 +48,7 @@
       <value>768000</value>
   </array>
   <!-- Power consumption in suspend -->
-  <item name="cpu.idle">1.7</item>
+  <item name="cpu.idle">0.1</item>
   <!-- Power consumption at different speeds -->
   <array name="cpu.active">
       <value>0.1</value>

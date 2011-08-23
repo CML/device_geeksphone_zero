@@ -75,7 +75,7 @@ extern "C" {
 #define DEFAULT_PICTURE_WIDTH  1024
 #define DEFAULT_PICTURE_HEIGHT 768
 #define THUMBNAIL_BUFFER_SIZE (THUMBNAIL_WIDTH * THUMBNAIL_HEIGHT * 3/2)
-#define MAX_ZOOM_LEVEL 5
+#define MAX_ZOOM_LEVEL 2
 #define NOT_FOUND -1
 // Number of video buffers held by kernal (initially 1,2 &3)
 #define ACTIVE_VIDEO_BUFFERS 3
@@ -914,6 +914,7 @@ static int fb_fd = -1;
 static int32_t mMaxZoom = 0;
 static bool zoomSupported = false;
 static bool native_get_maxzoom(int camfd, void *pZm);
+static bool native_get_zoomratios(int camfd, void *pZr, int maxZoomLevel);
 
 static int dstOffset = 0;
 
@@ -1066,10 +1067,10 @@ void QualcommCameraHardware::initDefaultParameters()
 {
     LOGV("initDefaultParameters E");
 
-    findSensorType();
     // Initialize constant parameter strings. This will happen only once in the
     // lifetime of the mediaserver process.
     if (!parameter_string_initialized) {
+        findSensorType();
         antibanding_values = create_values_str(
             antibanding, sizeof(antibanding) / sizeof(str_map));
         effect_values = create_values_str(
@@ -1114,12 +1115,18 @@ void QualcommCameraHardware::initDefaultParameters()
                 (void *)&mMaxZoom) == true){
             LOGD("Maximum zoom value is %d", mMaxZoom);
             zoomSupported = true;
-            if(mMaxZoom > 0){
+	    int32_t mMaxZoomPatch = (mMaxZoom)/2;
+            if(mMaxZoomPatch > 0){
                 //if max zoom is available find the zoom ratios
-                int16_t * zoomRatios = new int16_t[mMaxZoom+1];
+                int16_t * zoomRatios = new int16_t[mMaxZoomPatch + 1];
                 if(zoomRatios != NULL){
+                    if(native_get_zoomratios(mCameraControlFd,
+                                (void *)zoomRatios, mMaxZoomPatch + 1) == true){
+                        zoom_ratio_values =
+                            create_str(zoomRatios, mMaxZoomPatch + 1);
+                    }else {
                     LOGE("Failed to get zoomratios...");
-			// FIXME!
+                    }
                     delete zoomRatios;
                 } else {
                     LOGE("zoom ratios failed to acquire memory");
@@ -1182,7 +1189,7 @@ void QualcommCameraHardware::initDefaultParameters()
         LOGV("max zoom is %d", mMaxZoom);
         mParameters.set("max-zoom",mMaxZoom);
         mParameters.set(CameraParameters::KEY_ZOOM_RATIOS,
-                            "100,200,300,400,500,600");
+                            zoom_ratio_values);
     } else {
         mParameters.set(CameraParameters::KEY_ZOOM_SUPPORTED, "false");
     }
@@ -1548,6 +1555,31 @@ static bool native_get_maxzoom(int camfd, void *pZm)
     return true;
 }
 
+static bool native_get_zoomratios(int camfd, void *pZr, int maxZoomSize)
+{
+    LOGV("native_get_zoomratios E");
+    struct msm_ctrl_cmd ctrlCmd;
+    int16_t *zoomRatios = (int16_t *)pZr;
+
+    if(maxZoomSize <= 0)
+        return false;
+
+    ctrlCmd.type       = CAMERA_GET_PARM_ZOOMRATIOS;
+    ctrlCmd.timeout_ms = 5000;
+    ctrlCmd.length     = sizeof(int16_t)* (maxZoomSize);
+    ctrlCmd.value      = zoomRatios;
+    ctrlCmd.resp_fd    = camfd;
+
+    if (ioctl(camfd, MSM_CAM_IOCTL_CTRL_COMMAND, &ctrlCmd) < 0) {
+        LOGE("native_get_zoomratios: ioctl fd %d error %s",
+                camfd,
+                strerror(errno));
+        return false;
+    }
+    LOGV("native_get_zoomratios X");
+    return true;
+}
+
 static bool native_set_afmode(int camfd, isp3a_af_mode_t af_type)
 {
     int rc;
@@ -1577,6 +1609,7 @@ static bool native_cancel_afmode(int camfd, int af_fd)
     ctrlCmd.type = CAMERA_AUTO_FOCUS_CANCEL;
     ctrlCmd.length = 0;
     ctrlCmd.value = NULL;
+	ctrlCmd.status = 0;
     ctrlCmd.resp_fd = -1; // there's no response fd
 
     if ((rc = ioctl(camfd, MSM_CAM_IOCTL_CTRL_COMMAND_2, &ctrlCmd)) < 0)
@@ -1597,6 +1630,7 @@ static bool native_start_preview(int camfd)
     ctrlCmd.timeout_ms = 5000;
     ctrlCmd.type       = CAMERA_START_PREVIEW;
     ctrlCmd.length     = 0;
+	ctrlCmd.value      = NULL;
     ctrlCmd.resp_fd    = camfd; // FIXME: this will be put in by the kernel
 
     if (ioctl(camfd, MSM_CAM_IOCTL_CTRL_COMMAND, &ctrlCmd) < 0) {
@@ -2320,7 +2354,6 @@ void QualcommCameraHardware::runVideoThread(void *data)
           frameCnt++;
 #endif
             // Enable IF block to give frames to encoder , ELSE block for just simulation
-#if 1
             LOGV("in video_thread : got video frame, before if check giving frame to services/encoder");
             mCallbackLock.lock();
             int msgEnabled = mMsgEnabled;
@@ -2332,11 +2365,6 @@ void QualcommCameraHardware::runVideoThread(void *data)
                 LOGV("in video_thread : got video frame, giving frame to services/encoder");
                 rcb(timeStamp, CAMERA_MSG_VIDEO_FRAME, mRecordHeap->mBuffers[offset], rdata);
             }
-#else
-            // 720p output2  : simulate release frame here:
-            LOGE("in video_thread simulation , releasing the video frame");
-            LINK_camframe_free_video(vframe);
-#endif
 
         } else LOGE("in video_thread get frame returned null");
 
@@ -2427,6 +2455,10 @@ bool QualcommCameraHardware::initPreview()
                                 CbCrOffset,
                                 0,
                                 "preview");
+
+	// Make sure the zoom level is compatible with the final
+    // resolution...
+    setZoom(mParameters);
 
     if (!mPreviewHeap->initialized()) {
         mPreviewHeap.clear();
@@ -3064,13 +3096,6 @@ status_t QualcommCameraHardware::cancelAutoFocusInternal()
         return NO_ERROR;
     }
 
-#if 0
-    if (mAutoFocusFd < 0) {
-        LOGV("cancelAutoFocusInternal X: not in progress");
-        return NO_ERROR;
-    }
-#endif
-
     status_t rc = NO_ERROR;
     status_t err;
     err = mAfLock.tryLock();
@@ -3207,6 +3232,9 @@ void QualcommCameraHardware::runSnapshotThread(void *data)
     mInSnapshotModeWait.signal();
     mInSnapshotModeWaitLock.unlock();
 
+    // Make sure the zoom level is compatible with the final
+    // resolution...
+    setZoom(mParameters);
     mSnapshotFormat = 0;
 
     mJpegThreadWaitLock.lock();
@@ -3530,7 +3558,7 @@ bool QualcommCameraHardware::native_zoom_image(int fd, int srcOffset, int dstOff
     e->transp_mask = 0xffffffff;
     e->flags = 0;
     e->alpha = 0xff;
-    if (crop->in2_w != 0 && crop->in2_h != 0) {
+    if (crop->in2_w != 0 || crop->in2_h != 0) {
         e->src_rect.x = (crop->out2_w - crop->in2_w + 1) / 2 - 1;
         e->src_rect.y = (crop->out2_h - crop->in2_h + 1) / 2 - 1;
         e->src_rect.w = crop->in2_w;
@@ -3641,7 +3669,7 @@ void QualcommCameraHardware::receivePreviewFrame(struct msm_frame *frame)
             mOverlayLock.unlock();
         }
     } else {
-	if (crop->in2_w != 0 && crop->in2_h != 0) {
+	if (crop->in2_w != 0 || crop->in2_h != 0) {
 	    dstOffset = (dstOffset + 1) % NUM_MORE_BUFS;
 	    offset = kPreviewBufferCount + dstOffset;
 	    ssize_t dstOffset_addr = offset * mPreviewHeap->mAlignedBufferSize;
@@ -4375,17 +4403,7 @@ status_t QualcommCameraHardware::setPictureSize(const CameraParameters& params)
     int width, height;
     params.getPictureSize(&width, &height);
     LOGV("requested picture size %d x %d", width, height);
-
-    // Validate the picture size
-    for (int i = 0; i < supportedPictureSizesCount; ++i) {
-        if (width == picture_sizes_ptr[i].width
-                && height == picture_sizes_ptr[i].height) {
-            mParameters.setPictureSize(width, height);
-            mDimension.picture_width = width;
-            mDimension.picture_height = height;
-            return NO_ERROR;
-        }
-    }
+    
     /* Dimension not among the ones in the list. Check if
      * its a valid dimension, if it is, then configure the
      * camera accordingly. else reject it.
@@ -5282,7 +5300,7 @@ bool QualcommCameraHardware::isValidDimension(int width, int height) {
      && (height <= sensorType->max_supported_snapshot_height) )
     {
         uint32_t pictureAspectRatio = (uint32_t)((width * Q12)/height);
-        for(uint32_t i = 0; i < THUMBNAIL_SIZE_COUNT; i++ ) {
+        for(int i = 0; i < THUMBNAIL_SIZE_COUNT; i++ ) {
             if(thumbnail_sizes[i].aspect_ratio == pictureAspectRatio) {
                 retVal = TRUE;
                 break;

@@ -56,6 +56,12 @@ ro.com.google.locationfeatures=1
 ro.setupwizard.enable_bypass=1
 ro.media.dec.jpeg.memcap=20000000
 dalvik.vm.lockprof.threshold=500
+
+####NECESARIOS PARA EL SENSOR DE PROXIMIDAD####
 # Respect ALS setting, turn it off if not in use
 ro.hardware.respect_als=true
-ro.data.on=1
+# Evita la suspensión del sensor de proximidad durante la llamada, realizando un lock PARTIAL
+ro.prox.no.suspend.in.call=true
+# Delay específico del sensor de proximidad, valor por defecto = 1000, 
+# en ZERO para una rápida respuesta del sensor, se ha establecido a 150
+ro.prox.delay=150

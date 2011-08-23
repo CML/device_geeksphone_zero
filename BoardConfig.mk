@@ -2,19 +2,21 @@ USE_CAMERA_STUB:= false
 
 BOARD_USES_QCOM_HARDWARE := true
 BOARD_USES_QCOM_LIBS := true
+# Bluetooth
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_BCM := true
 
 BOARD_WLAN_DEVICE := bcm4329
+#WIFI_DRIVER_FW_STA_PATH := "/system/etc/firmware/fw_bcm4329_apsta.bin"
 WIFI_DRIVER_MODULE_NAME     := "dhd"
 WIFI_DRIVER_MODULE_PATH     := "/system/lib/modules/dhd.ko"
 WIFI_DRIVER_MODULE_ARG      := "firmware_path=/system/etc/firmware/fw_bcm4329.bin nvram_path=/system/etc/wifi/nvram.txt"
+## No CSCAN, no 0.6
+#WPA_SUPPLICANT_VERSION      := VER_0_6_X
 WIFI_FIRMWARE_LOADER        := wifi-loader
 
 BOARD_WPA_SUPPLICANT_DRIVER := AWEXT
 BOARD_USE_CAF_LIBCAMERA := true
-
-BOARD_AVOID_DRAW_TEXTURE_EXTENSION := true
 
 # inherit from the proprietary version
 -include vendor/geeksphone/zero/BoardConfigVendor.mk
@@ -26,12 +28,6 @@ TARGET_BOARD_PLATFORM := msm7k
 TARGET_CPU_ABI := armeabi
 TARGET_BOOTLOADER_BOARD_NAME := zero
 
-TARGET_BOARD_PLATFORM_GPU := qcom-adreno200
-
-BOARD_KERNEL_CMDLINE := mem=212M console=null androidboot.hardware=zero
-BOARD_KERNEL_BASE := 0x00200000
-BOARD_PAGE_SIZE := 0x00000800
-
 # fix this up by examining /proc/mtd on a running device
 BOARD_BOOTIMAGE_PARTITION_SIZE := 0x00500000
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 0x00500000
@@ -39,17 +35,26 @@ BOARD_SYSTEMIMAGE_PARTITION_SIZE := 0x0c800000
 BOARD_USERDATAIMAGE_PARTITION_SIZE := 0x0c3a0000
 BOARD_FLASH_BLOCK_SIZE := 131072
 
+#kernel/boot
 TARGET_PREBUILT_KERNEL := device/geeksphone/zero/kernel
+BOARD_KERNEL_CMDLINE := mem=212M androidboot.hardware=zero no_console_suspend=1 console=null quiet
+BOARD_KERNEL_BASE := 0x00200000
+BOARD_PAGE_SIZE := 0x00000800
+BOARD_USE_USB_MASS_STORAGE_SWITCH := true
 
+#recovery
 BOARD_CUSTOM_RECOVERY_KEYMAPPING := ../../device/geeksphone/zero/recovery_ui.c
 
+#graficos
 BOARD_NO_RGBX_8888 := true
-
+TARGET_BOARD_PLATFORM_GPU := qcom-adreno200
+BOARD_AVOID_DRAW_TEXTURE_EXTENSION := true
 TARGET_LIBAGL_USE_GRALLOC_COPYBITS := true
 
 JS_ENGINE := v8
 
 TARGET_PROVIDES_LIBAUDIO := true
+
 TARGET_PROVIDES_LIBRIL := true
 
 # to enable the GPS HAL
@@ -61,11 +66,15 @@ BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION := 50000
 
 TARGET_OTA_ASSERT_DEVICE := zero
 TARGET_USES_OLD_LIBSENSORS_HAL:=true
+TARGET_HAS_ZERO_SENSORS:=true
 
+# FM Radio
 BOARD_HAVE_FM_RADIO := true
-BOARD_GLOBAL_CFLAGS += -DHAVE_FM_RADIO
+TARGET_GLOBAL_CFLAGS += -DHAVE_FM_RADIO
+TARGET_GLOBAL_CPPFLAGS += -DHAVE_FM_RADIO
 BOARD_USE_BROADCOM_FM_VOLUME_HACK := true
 
-BOARD_HAS_VIBRATOR_IMPLEMENTATION := ../../device/geeksphone/zero/vibrator.c
+# System
+WITH_DEXPREOPT := true
 
-TARGET_PROXIMITY_SENSOR_LIMIT := 3
+BOARD_HAS_VIBRATOR_IMPLEMENTATION := ../../device/geeksphone/zero/vibrator.c

@@ -1,5 +1,5 @@
 # The gps config appropriate for this device
-$(call inherit-product, device/common/gps/gps_us_supl.mk)
+$(call inherit-product, device/common/gps/gps_eu_supl.mk)
 
 $(call inherit-product-if-exists, vendor/geeksphone/zero/zero-vendor.mk)
 
@@ -40,9 +40,9 @@ PRODUCT_COPY_FILES += \
 # Board-specific init
 PRODUCT_COPY_FILES += \
     device/geeksphone/zero/ueventd.pw28.rc:root/ueventd.pw28.rc \
-    device/geeksphone/zero/init.zero.rc:root/init.zero.rc \
     device/geeksphone/zero/320_480logo.rle:root/320_480logo.rle \
-    device/geeksphone/zero/320_480logo.rle:root/initlogo.rle 
+    device/geeksphone/zero/320_480logo.rle:root/initlogo.rle \
+    device/geeksphone/zero/init.zero.rc:root/init.zero.rc
 
 ## RIL related stuff
 PRODUCT_COPY_FILES += \
@@ -119,7 +119,6 @@ PRODUCT_COPY_FILES += \
     vendor/geeksphone/zero/proprietary/lib/libbluedroid.so:system/lib/libbluedroid.so \
     vendor/geeksphone/zero/proprietary/lib/libaudio.so:system/lib/libaudio.so \
     vendor/geeksphone/zero/proprietary/app/FMRadio.apk:system/app/FMRadio.apk
-
 
    # device/geeksphone/zero/AudioFilter.csv:system/etc/AudioFilter.csv \
    
