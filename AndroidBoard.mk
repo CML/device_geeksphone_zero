@@ -1,8 +1,11 @@
 LOCAL_PATH := $(call my-dir)
 
-include $(CLEAR_VARS)
+TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 
-ALL_PREBUILT += $(INSTALLED_KERNEL_TARGET)
+file := $(INSTALLED_KERNEL_TARGET)
+ALL_PREBUILT += $(file)
+$(file) : $(TARGET_PREBUILT_KERNEL) | $(ACP)
+$(transform-prebuilt-to-target)
 
 # include the non-open-source counterpart to this file
--include vendor/geeksphone/zero/AndroidBoardVendor.mk
+-include vendor/Boston/AndroidBoardVendor.mk
